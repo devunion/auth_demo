@@ -75,7 +75,14 @@ need to have timeout here.
 I've started to implement the these two points, but not finished them properly due to lack of time.
 
 ## Test task implementation
+I've tried to create real architecture for the project. For example, it will be easy to add backend support, 
+encryption and etc without any serious modifications.
+
 Some parts of code was taken form my old projects. They're not adopted for ES6 and whole code can look a bit messy. 
+
+I've removed my real passwords for all sites but WebEx. So, you need to modify `./src/js/test-logins.js` and 
+recompile it in order to get all things working. You can also try to play with the different web sites by editing entry 
+for `extensiondev.com` or adding new one.   
 
 For WebEx and Gmail I've selected config-based approach. It is not enough information to analyze and create flexible 
 solution. In addition, it is much more time consuming task. The demo just demonstrates that it is possible to handle a 

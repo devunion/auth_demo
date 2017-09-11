@@ -58,5 +58,4 @@ export const TEST_LOGINS = {
             }]
         }
     }
-
-}; 
+};
