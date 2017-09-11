@@ -1,4 +1,4 @@
-##Compilation
+## Compilation
 In order to compile the extension from sources you need to type the next command in console:
 ```
 npm run dev
