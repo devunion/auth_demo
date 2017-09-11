@@ -1,0 +1,21 @@
+{
+  "manifest_version": 2,
+  "name": "ss_auth",
+  "version": "1.0.0",
+  "description": "ss_auth test task",
+  "permissions": [
+    "http://*/*",
+    "https://*/*",
+    "tabs"
+  ],
+  "background": {
+    "scripts": ["js/background.js"]
+  },
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["js/content.js"],
+      "run_at": "document_end"
+    }
+  ]
+}

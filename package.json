@@ -1,0 +1,23 @@
+{
+  "name": "ss_auth",
+  "description": "ss_auth test",
+  "version": "1.0.0",
+  "license": "UNLICENSED",
+  "scripts": {
+    "dev": "webpack --env.target=local --progress --watch",
+    "build:dev": "webpack --env.target=dev --progress -p",
+    "build:production": "webpack --env.target=production --progress -p"
+  },
+  "dependencies": {
+    "jquery": "^3.2.1",
+    "robotjs": "^0.4.7"
+  },
+  "devDependencies": {
+    "babel-core": "^6.24.0",
+    "babel-loader": "^6.4.1",
+    "babel-preset-env": "^1.2.2",
+    "copy-webpack-plugin": "^4.0.1",
+    "nodemon": "^1.11.0",
+    "webpack": "^2.2.1"
+  }
+}
