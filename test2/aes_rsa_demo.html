@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Title</title>
+</head>
+<body>
+
+<button id="genKey">Start the show</button>
+<br>
+<br>
+
+<strong>AES key:</strong>
+<br>
+<textarea id="aesKey" cols="200" rows="4">
+</textarea>
+<br>
+<strong>Private RSA key:</strong>
+<br>
+<textarea id="privateRsaKey" cols="200" rows="4">
+</textarea>
+<br>
+<strong>Public RSA key:</strong>
+<br>
+<textarea id="publicRsaKey" cols="200" rows="4">
+</textarea>
+<br>
+<strong>Encrypted AES key:</strong>
+<br>
+<textarea id="encryptedAesKey" cols="200" rows="4">
+</textarea>
+<br>
+<strong>Original message:</strong>
+<br>
+<textarea id="message" cols="200" rows="4">
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam in dapibus diam, nec porttitor justo. Vestibulum enim neque, mollis quis turpis id, elementum porta leo. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Sed placerat dapibus rhoncus. Duis euismod ex ac massa gravida pretium. Duis sodales ac quam a eleifend. Nam molestie viverra metus, vitae tempus justo bibendum ut. Nullam augue lacus, iaculis a nisi eu, semper dapibus purus. Cras et ornare justo.
+</textarea>
+<br>
+<strong>AES encrypted message</strong><br>
+<textarea id="encrypted" cols="200" rows="4">
+
+</textarea>
+<br>
+<strong>AES Decrypted message:</strong>
+<br>
+<textarea id="decrypted" cols="200" rows="4">
+
+</textarea>
+<br>
+<strong>Output logs:</strong>
+<br>
+<textarea id="logs" cols="200" rows="4"></textarea>
+<br>
+<script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+
+<script type="text/javascript" src="js/aes.js"></script>
+<script type="text/javascript" src="js/pbkdf2.js"></script>
+<script src="js/openpgp.min.js"></script>
+
+
+<script>
+    const AES_KEY_SIZE = 256 / 32;
+    const RSA_KEY_SIZE = 2048;
+
+    const PASSPHRASE = 'secret passphrase';
+    const AES_PASSPHRASE = 'secret passphrase 2';
+
+    var start, end;
+
+    function generateAesKey() {
+        const salt = CryptoJS.lib.WordArray.random(128 / 8);
+
+        return CryptoJS.PBKDF2(AES_PASSPHRASE, salt, {keySize: AES_KEY_SIZE});
+    }
+
+    function generateRsaKeys(callback) {
+        const USER_IDS = [{name: 'Jon Smith', email: 'jon@example.com'}];
+
+        var options = {
+            userIds: USER_IDS, // multiple user IDs
+            numBits: RSA_KEY_SIZE,                                            // RSA key size
+            passphrase: PASSPHRASE
+        };
+
+        openpgp.generateKey(options).then(function (key) {
+            var privkey = key.privateKeyArmored;
+            var pubkey = key.publicKeyArmored;
+
+            var privKeyObj = openpgp.key.readArmored(privkey).keys[0];
+            privKeyObj.encrypt(privkey);
+
+            callback(pubkey, privkey);
+        });
+    }
+
+    function encryptAesKey(privkey, pubkey, aesKey, callback) {
+        var privKeyObj = openpgp.key.readArmored(privkey).keys[0];
+        privKeyObj.decrypt(PASSPHRASE);
+
+        var options = {
+            data: aesKey,
+            publicKeys: openpgp.key.readArmored(pubkey).keys,  // for encryption
+            privateKeys: privKeyObj // for signing (optional)
+        };
+
+        openpgp.encrypt(options).then(function (ciphertext) {
+            callback(ciphertext.data);
+        });
+    }
+
+    function decryptAesKey(privkey, pubkey, aesKey, callback) {
+        var privKeyObj = openpgp.key.readArmored(privkey).keys[0];
+        privKeyObj.decrypt(PASSPHRASE);
+
+        var options = {
+            message: openpgp.message.readArmored(aesKey),
+            publicKeys: openpgp.key.readArmored(pubkey).keys,
+            privateKey: privKeyObj
+        };
+
+        openpgp.decrypt(options).then(function (plaintext) {
+            return callback(plaintext.data);
+        });
+    }
+
+    function appendLog(msg) {
+        var prev = $('#logs').val();
+        if ($.trim(prev) != '') {
+            prev += "\n"
+        }
+
+        $('#logs').val(prev + msg);
+    }
+
+    function encryptMessage(message, aesKey) {
+        return CryptoJS.AES.encrypt(message, aesKey.toString()).toString();
+    }
+    function decryptMessage(message, aesKey) {
+        return CryptoJS.AES.decrypt(message, aesKey.toString()).toString(CryptoJS.enc.Utf8);
+    }
+
+    $(function () {
+        $('#genKey').click(function () {
+
+            //
+            // Random AES Key generation
+            //
+            ////////////////////////////////////////////////////////////////////////
+
+            start = new Date().getTime();
+            var aesKey = generateAesKey();
+            $('#aesKey').val(aesKey);
+            end = new Date().getTime();
+            appendLog('AES key generated at: ' + (end - start) + 'ms');
+
+            //
+            // Message encryption with the generated keys
+            //
+            ////////////////////////////////////////////////////////////////////////
+
+            var message = $('#message').val();
+            start = new Date().getTime();
+            var encryptedMsg = encryptMessage(message, aesKey);
+            $('#encrypted').val(encryptedMsg);
+            end = new Date().getTime();
+            appendLog('Message encrypted with AES at: ' + (end - start) + 'ms');
+
+            //
+            // RSA keypair generation
+            //
+            ////////////////////////////////////////////////////////////////////////
+
+            start = new Date().getTime();
+            generateRsaKeys(function (pubkey, privkey) {
+                end = new Date().getTime();
+                appendLog('RSA Keys generated at: ' + (end - start) + 'ms');
+
+                $('#publicRsaKey').val(pubkey);
+                $('#privateRsaKey').val(privkey);
+
+                //
+                // AES key encryption with RSA public key
+                //
+                ////////////////////////////////////////////////////////////////////////
+                start = new Date().getTime();
+                encryptAesKey(privkey, pubkey, aesKey.toString(), function (encryptedAesKey) {
+                    end = new Date().getTime();
+                    $('#encryptedAesKey').val(encryptedAesKey);
+                    appendLog('AES Key encrypted at: ' + (end - start) + 'ms');
+
+                    //
+                    // AES key decryption with RSA private key
+                    //
+                    ////////////////////////////////////////////////////////////////////////
+                    start = new Date().getTime();
+                    decryptAesKey(privkey, pubkey, encryptedAesKey, function(decryptedAesKey){
+                        end = new Date().getTime();
+                        appendLog('AES Key decrypted at: ' + (end - start) + 'ms');
+
+
+                        //
+                        // Original message decryption with decryped AES key
+                        //
+                        ////////////////////////////////////////////////////////////////////////
+
+                        start = new Date().getTime();
+                        var decryptedMessage = decryptMessage($('#encrypted').val(), decryptedAesKey);
+                        end = new Date().getTime();
+                        appendLog('Message decrypted with AES Key at: ' + (end - start) + 'ms');
+
+                        $('#decrypted').val(decryptedMessage);
+                    })
+                });
+            });
+        });
+    });
+</script>
+</body>
+</html>
